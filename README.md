@@ -1,1 +1,1 @@
-mq study
+mq design
