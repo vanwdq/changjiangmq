@@ -4,7 +4,6 @@ import com.wdq.rpc.proxy.ProxyClient;
 import com.wdq.rpc.serializable.RpcRequest;
 import com.wdq.rpc.serializable.RpcResponse;
 import io.netty.channel.*;
-import io.netty.util.ReferenceCountUtil;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 
@@ -25,10 +24,8 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
         this.channel = ctx.channel();
     }
 
-    // 只是读数据，没有写数据的话
-    // 需要自己手动的释放的消息
-    public void channelRead(ChannelHandlerContext ctx, Object msg)
-            throws Exception {
+    @Override
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {
         try {
             RpcResponse response = (RpcResponse) msg;
             String requestId = response.getResponseId();
@@ -37,14 +34,14 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
                 pendingRPC.remove(requestId);
                 rpcFuture.done(response);
             }
-        } finally {
-            ReferenceCountUtil.release(msg);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
+
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
-            throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         ctx.close();
     }
 

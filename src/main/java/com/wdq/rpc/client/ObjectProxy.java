@@ -12,7 +12,6 @@ public class ObjectProxy<T> implements InvocationHandler {
 
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-        System.out.println(method.getDeclaringClass().getName());
         RpcRequest rpcRequest = new RpcRequest();
         rpcRequest.setRequestId(UUID.randomUUID().toString());
         rpcRequest.setMethodName(method.getName());

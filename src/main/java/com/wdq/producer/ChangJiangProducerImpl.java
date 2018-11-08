@@ -6,21 +6,20 @@ import com.wdq.rpc.proxy.ProxyClient;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 import java.util.Properties;
+import java.util.concurrent.CountDownLatch;
 
 public class ChangJiangProducerImpl implements ChangJiangProducerInter {
 
-    private Properties properties = new Properties();
 
     public ChangJiangProducerImpl(Properties properties) {
-        this.properties = properties;
         String[] address = properties.getProperty("bootstrap.servers").split(":");
         String host = address[0];
         String port = address[1];
         try {
-            ConnectManage.getInstance().connectServerNode(new InetSocketAddress(InetAddress.getByName(host), Integer.parseInt(port)));
-            Thread.sleep(3000);
+            CountDownLatch countDownLatch = new CountDownLatch(1);
+            ConnectManage.getInstance().connectServerNode(new InetSocketAddress(InetAddress.getByName(host), Integer.parseInt(port)), countDownLatch);
+            countDownLatch.await();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -31,7 +30,7 @@ public class ChangJiangProducerImpl implements ChangJiangProducerInter {
         try {
             IMqService iMqService = ProxyClient.create(IMqService.class);
             boolean flag = iMqService.deal(producerRecord);
-            if(flag){
+            if (flag) {
                 System.out.println("success");
             }
         } catch (Exception e) {

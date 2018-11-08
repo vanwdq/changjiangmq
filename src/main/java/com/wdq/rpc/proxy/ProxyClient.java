@@ -3,33 +3,26 @@ package com.wdq.rpc.proxy;
 import com.wdq.rpc.client.ObjectProxy;
 import com.wdq.rpc.serializable.RpcRequest;
 import com.wdq.rpc.serializable.RpcResponse;
-
 import java.lang.reflect.Proxy;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.locks.AbstractQueuedSynchronizer;
+import java.util.concurrent.CountDownLatch;
 
 public class ProxyClient {
 
     private RpcRequest rpcRequest;
     private RpcResponse rpcResponse;
-    private Sync sync;
+    private CountDownLatch countDownLatch = new CountDownLatch(1);
 
-    public ProxyClient() {
-        this.sync = new Sync();
-    }
-
-    public Object get() throws InterruptedException, ExecutionException {
-        sync.acquire(-1);
+    public Object get() throws InterruptedException {
+        countDownLatch.await();
         if (this.rpcResponse != null) {
             return this.rpcResponse.getValue();
-        } else {
-            return null;
         }
+        return null;
     }
 
     public void done(RpcResponse reponse) {
         this.rpcResponse = reponse;
-        sync.release(1);
+        countDownLatch.countDown();
     }
 
     public RpcRequest getRpcRequest() {
@@ -56,32 +49,4 @@ public class ProxyClient {
                 new ObjectProxy<T>()
         );
     }
-
-    static class Sync extends AbstractQueuedSynchronizer {
-
-        private static final long serialVersionUID = 1L;
-
-        //future status
-        private final int done = 1;
-        private final int pending = 0;
-
-        protected boolean tryAcquire(int acquires) {
-            return getState() == done ? true : false;
-        }
-
-        protected boolean tryRelease(int releases) {
-            if (getState() == pending) {
-                if (compareAndSetState(pending, done)) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        public boolean isDone() {
-            getState();
-            return getState() == done;
-        }
-    }
-
 }

@@ -8,18 +8,14 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
+
 import java.net.InetSocketAddress;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.CountDownLatch;
 
 public class ConnectManage {
     private volatile static ConnectManage connectManage;
     private CopyOnWriteArrayList<ClientHandler> connectedHandlers = new CopyOnWriteArrayList<>();
-    private ReentrantLock lock = new ReentrantLock();
-    private Condition connected = lock.newCondition();
-    private long connectTimeoutMillis = 6000;
 
     private ConnectManage() {
 
@@ -37,7 +33,7 @@ public class ConnectManage {
     }
 
 
-    public void connectServerNode(final InetSocketAddress remotePeer) {
+    public void connectServerNode(final InetSocketAddress remotePeer, CountDownLatch countDownLatch) {
         Bootstrap b = new Bootstrap();
         EventLoopGroup eventLoopGroup = new NioEventLoopGroup(4);
         b.group(eventLoopGroup)
@@ -49,37 +45,20 @@ public class ConnectManage {
             @Override
             public void operationComplete(final ChannelFuture channelFuture) throws Exception {
                 if (channelFuture.isSuccess()) {
+                   // System.out.println("连接成功");
                     ClientHandler clientHandler = channelFuture.channel().pipeline().get(ClientHandler.class);
                     addHandler(clientHandler);
+                    countDownLatch.countDown();
                 }
             }
         });
     }
 
-    private void signalAvailableHandler() {
-        lock.lock();
-        try {
-            connected.signalAll();
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    private boolean waitingForHandler() throws InterruptedException {
-        lock.lock();
-        try {
-            return connected.await(this.connectTimeoutMillis, TimeUnit.MILLISECONDS);
-        } finally {
-            lock.unlock();
-        }
-    }
-
-
     public ClientHandler chooseHandler() {
         if (connectedHandlers != null && connectedHandlers.size() > 0) {
             return connectedHandlers.get(0);
-        }else {
-            System.out.println("sasasas");
+        } else {
+            System.out.println("连接失败");
         }
         return null;
     }
@@ -87,7 +66,6 @@ public class ConnectManage {
 
     private void addHandler(ClientHandler handler) {
         connectedHandlers.add(handler);
-        signalAvailableHandler();
     }
 
 

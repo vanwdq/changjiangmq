@@ -36,12 +36,4 @@ public class RpcResponse implements Serializable {
         this.value = value;
     }
 
-    @Override
-    public String toString() {
-        return "RpcResponse{" +
-                "responseId='" + responseId + '\'' +
-                ", value=" + value +
-                ", status=" + status +
-                '}';
-    }
 }

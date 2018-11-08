@@ -1,13 +1,19 @@
 package com.wdq.rpc.inter.impl;
 
 
+import com.wdq.consumer.ConsumerRecord;
 import com.wdq.producer.ProducerRecord;
 import com.wdq.rpc.inter.IMqService;
 import com.wdq.rpc.inter.rpc.RpcService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowCallbackHandler;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 @RpcService(IMqService.class)
 public class IMqServiceImpl implements IMqService {
@@ -33,5 +39,31 @@ public class IMqServiceImpl implements IMqService {
             e.printStackTrace();
         }
         return false;
+    }
+
+    @Override
+    public List<ConsumerRecord> poll(List<String> topics, int size) {
+        StringBuffer sb = new StringBuffer();
+        if (topics != null && topics.size() > 0) {
+            for (String topic : topics) {
+                sb.append("'").append(topic).append("'").append(",");
+            }
+            sb = sb.deleteCharAt(sb.length() - 1);
+        }
+        String sql = "select * from tb_msg where topic in (" + sb.toString() + ") limit 1";
+        System.out.println("sql:" + sql);
+        List<ConsumerRecord> consumerRecords = new ArrayList<>();
+        jdbcTemplate.query(sql, new RowCallbackHandler() {
+            @Override
+            public void processRow(ResultSet resultSet) throws SQLException {
+                ConsumerRecord consumerRecord = new ConsumerRecord();
+                String msgId = resultSet.getString("msg_id");
+                String body = resultSet.getString("body");
+                consumerRecord.setMsgId(msgId);
+                consumerRecord.setValue(body);
+                consumerRecords.add(consumerRecord);
+            }
+        });
+        return consumerRecords;
     }
 }
